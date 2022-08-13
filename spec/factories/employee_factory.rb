@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :employee do
-    name 'John Smith'
+    name { 'John Smith' }
 
     trait :manager do
     end

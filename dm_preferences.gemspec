@@ -16,6 +16,6 @@ Gem::Specification.new do |s|
   s.test_files        = Dir["spec/**/*"]
   s.rdoc_options      = %w(--line-numbers --inline-source --title preferences --main README.rdoc)
   s.extra_rdoc_files  = %w(README.md CHANGELOG.md LICENSE)
-  
-  s.add_dependency "rails", ">= 4.2"
+
+  s.add_dependency "rails", ">= 6.0"
  end

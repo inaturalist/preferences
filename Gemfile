@@ -1,17 +1,17 @@
 source "http://www.rubygems.org"
 
-rails_version = ENV["RAILS_VERSION"] || "default"
+# rails_version = ENV["RAILS_VERSION"] || "default"
+#
+# rails = case rails_version
+# when "master"
+#   {github: "rails/rails"}
+# when "default"
+#   ">= 6.0", '< 7.0'
+# else
+#   "~> #{rails_version}"
+# end
 
-rails = case rails_version
-when "master"
-  {github: "rails/rails"}
-when "default"
-  ">= 3.2.0"
-else
-  "~> #{rails_version}"
-end
-
-gem "rails", rails
+gem "rails", ">= 6.0", '< 7.0'
 
 gemspec
 
@@ -19,7 +19,7 @@ group :development, :test do
   gem 'sqlite3'
   gem 'byebug'
 
-  gem 'mocha', '~> 1.3.0', :require => false
-  gem 'rspec-rails', '~> 3.7.2'
-  gem 'factory_bot_rails', '~> 4.8.2'
+  gem 'mocha', '~> 1.14.0', :require => false
+  gem 'rspec-rails', '~> 5.1.2'
+  gem 'factory_bot_rails', '~> 6.2.0'
 end
