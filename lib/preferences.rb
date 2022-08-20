@@ -235,9 +235,8 @@ module Preferences
     # for, and querying for the the presence of multiple preferences requires
     # multiple joins.
     def build_preference_scope(preferences, inverse = false)
-      joins = []
-      statements = []
-      values = []
+      join_statements = []
+      conditions = nil
 
       # Flatten the preferences for easier processing
       preferences = preferences.inject({}) do |result, (group, value)|
@@ -253,44 +252,36 @@ module Preferences
         group_id, group_type = Preference.split_group(group)
         preference = preference.to_s
         definition = preference_definitions[preference.to_s]
-        value = definition.type_cast(value)
+        value      = definition.type_cast(value)
         is_default = definition.default_value(group_type) == value
 
-        table = "preferences_#{group_id}_#{group_type}_#{preference}"
+        table_alias_name = "preferences_#{group_id}_#{group_type}_#{preference}"
+        table_alias      = Preference.arel_table.alias(table_alias_name)
 
-        # Since each preference is a different record, they need their own
-        # join so that the proper conditions can be set
-        joins << "LEFT JOIN preferences AS #{table} ON #{table}.owner_id = #{table_name}.#{primary_key} AND " +
-          sanitize_sql_hash_for_conditions(
-            "#{table}.owner_type" => base_class.name.to_s,
-            "#{table}.group_id" => group_id,
-            "#{table}.group_type" => group_type,
-            "#{table}.name" => preference
+        equal_primary_key            = table_alias[:owner_id].eq(arel_table[primary_key])
+        owner_type_equals_base_class = table_alias[:owner_type].eq(base_class)
+        group_id_equals              = table_alias[:group_id].eq(group_id)
+        group_type_equals            = table_alias[:group_type].eq(group_type)
+        name_equals                  = table_alias[:name].eq(preference)
+
+        join_statements << arel_table
+          .join(table_alias, Arel::Nodes::OuterJoin)
+          .on(equal_primary_key
+            .and(owner_type_equals_base_class)
+            .and(group_id_equals)
+            .and(group_type_equals)
+            .and(name_equals)
           )
 
-        if inverse
-          statements << "#{table}.id IS NOT NULL AND #{table}.value " + (value.nil? ? ' IS NOT NULL' : ' != ?') + (!is_default ? " OR #{table}.id IS NULL" : '')
-        else
-          statements << "#{table}.id IS NOT NULL AND #{table}.value " + (value.nil? ? ' IS NULL' : ' = ?') + (is_default ? " OR #{table}.id IS NULL" : '')
-        end
-        values << value unless value.nil?
+        condition = table_alias[:id].not_eq(nil)
+        condition = inverse ? condition.and(table_alias[:value].not_eq(value)) : condition.and(table_alias[:value].eq(value))
+        condition = condition.or(table_alias[:id].eq(nil)) if is_default != inverse
+
+        conditions = conditions ? conditions.and(condition) : condition
       end
 
-      sql = statements.map! {|statement| "(#{statement})"} * ' AND '
-      joins(joins).where(values.unshift(sql))
+      joins(join_statements.map(&:join_sources)).where(conditions)
     end
-
-    # The Rails version of this function was removed in 5.0. So use this instead.
-    # It properly handles the 'IS NULL' case
-    def sanitize_sql_hash_for_conditions(attrs)
-      return '' unless attrs.is_a? Hash
-      conditions = []
-      attrs.each do |key, value|
-        conditions << (value ? sanitize_sql_for_conditions(["#{key} = ?", value]) : "#{key} IS NULL")
-      end
-      conditions.join(' AND ')
-    end
-
   end
 
   module InstanceMethods

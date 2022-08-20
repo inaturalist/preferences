@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe "ModelPreferenceTest" do
-  after :each do
+  before :each do
     User.preference_definitions.clear
   end
 
@@ -273,7 +273,7 @@ describe "ModelPreferenceTest" do
 
     it "test_should_raise_exception_if_invalid_preference_read" do
       expect {
-        @user.preferred(:invalid) 
+        @user.preferred(:invalid)
       }.to raise_error(ArgumentError, 'Unknown preference: invalid')
     end
 

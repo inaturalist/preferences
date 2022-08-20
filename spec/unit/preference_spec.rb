@@ -39,9 +39,10 @@ end
 
 #------------------------------------------------------------------------------
 describe "PreferenceTest" do
-  
+  let(:manager) { create(:manager) }
+
   it "test_should_be_valid_with_a_set_of_valid_attributes" do
-    preference = build(:preference)
+    preference = build(:preference, owner: manager)
     expect(preference.valid?).to eq true
   end
 
@@ -64,18 +65,18 @@ describe "PreferenceTest" do
   end
 
   it "test_should_not_require_a_group_id" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, :group => nil, owner: manager)
     expect(preference.valid?).to eq true
   end
 
   it "test_should_not_require_a_group_id_if_type_specified" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, :group => nil, owner: manager)
     preference.group_type = 'Car'
     expect(preference.valid?).to eq true
   end
 
   it "test_should_not_require_a_group_type" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, :group => nil, owner: manager)
     expect(preference.valid?).to eq true
   end
 
