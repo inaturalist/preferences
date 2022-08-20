@@ -1,3 +1,9 @@
+## 1.6.0 / 2022-08-20
+
+* Rails 6.1 support
+* Craft preference queries using Arel instead of direct SQL
+* Fix how values are typecast
+
 ## 1.0 / 2015-08-01
 
 * Rails 4.2 support
@@ -82,12 +88,12 @@
 
 * Avoid string evaluation for dynamic methods
 * Return hashes for the preference_values, e.g.
-  
+
   user.preference_values            # => {'color' => 'red', 'number' => 11, 'website' => {'background' => 'white', 'foreground' => 'black'}}
   user.preference_values('website') # => {'background' => 'white', 'foreground' => 'black'}
 
 * Add more generic grouping of preferences than with just other records, e.g.
-  
+
   user.preferred_color('cars')
 
 * Remove support for an options hash when specifying :for associations for preference
