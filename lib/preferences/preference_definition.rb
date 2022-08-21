@@ -11,17 +11,16 @@ module Preferences
       @type = args.first ? args.first.to_sym : :boolean
 
       @klass = if type == :any
-                ActiveRecord::Type::Value.new
-              else
-                ActiveRecord::Type.lookup(type)
-              end
+        ActiveRecord::Type::Value.new
+      else
+        ActiveRecord::Type.lookup(type)
+      end
 
       @name = name.to_s
       @default = options[:default]
 
-      @group_defaults = (options[:group_defaults] || {}).inject({}) do |defaults, (group, default)|
+      @group_defaults = (options[:group_defaults] || {}).each_with_object({}) do |(group, default), defaults|
         defaults[group.is_a?(Symbol) ? group.to_s : group] = type_cast(default)
-        defaults
       end
     end
 

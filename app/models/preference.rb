@@ -9,15 +9,15 @@
 # Car record.  This allows preferences to have a sort of context around them.
 class Preference < ActiveRecord::Base
   if ActiveRecord::VERSION::MAJOR >= 5
-    belongs_to :owner, :polymorphic => true, :optional => true
-    belongs_to :group, :polymorphic => true, :optional => true
+    belongs_to :owner, polymorphic: true, optional: true
+    belongs_to :group, polymorphic: true, optional: true
   else
-    belongs_to :owner, :polymorphic => true
-    belongs_to :group, :polymorphic => true
+    belongs_to :owner, polymorphic: true
+    belongs_to :group, polymorphic: true
   end
 
   validates_presence_of :name, :owner_id, :owner_type
-  validates_presence_of :group_type, :if => :group_id?
+  validates_presence_of :group_type, if: :group_id?
 
   class << self
     # Splits the given group into its corresponding id and type. For simple
@@ -62,10 +62,10 @@ class Preference < ActiveRecord::Base
     group_id ? original_group : group_type
   end
 
-
   private
-    # Finds the definition for this preference in the given owner class.
-    def find_definition(owner_class)
-      owner_class.respond_to?(:preference_definitions) && owner_class.preference_definitions[name]
-    end
+
+  # Finds the definition for this preference in the given owner class.
+  def find_definition(owner_class)
+    owner_class.respond_to?(:preference_definitions) && owner_class.preference_definitions[name]
+  end
 end
