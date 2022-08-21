@@ -1,1 +1,1 @@
-require 'preferences'
+require "preferences"

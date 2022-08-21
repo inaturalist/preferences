@@ -1,4 +1,4 @@
-class User < ActiveRecord::Base
+class User < ApplicationRecord
  preference :hot_salsa
  preference :dark_chocolate, :default => true
  preference :color, :string

@@ -1,11 +1,11 @@
 FactoryBot.define do
   factory :employee do
-    name 'John Smith'
+    name { "John Smith" }
 
     trait :manager do
     end
   end
 
-  factory :manager, parent: :employee, class: 'Manager' do
+  factory :manager, parent: :employee, class: "Manager" do
   end
 end

@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 # include Factory
 
@@ -39,48 +39,49 @@ end
 
 #------------------------------------------------------------------------------
 describe "PreferenceTest" do
-  
+  let(:manager) { create(:manager) }
+
   it "test_should_be_valid_with_a_set_of_valid_attributes" do
-    preference = build(:preference)
+    preference = build(:preference, owner: manager)
     expect(preference.valid?).to eq true
   end
 
   it "test_should_require_a_name" do
-    preference = build(:preference, :name => nil)
+    preference = build(:preference, name: nil)
     expect(preference.valid?).to eq false
     expect(preference.errors.include?(:name)).to eq true
   end
 
   it "test_should_require_an_owner_id" do
-    preference = build(:preference, :owner => nil)
+    preference = build(:preference, owner: nil)
     expect(preference.valid?).to eq false
     expect(preference.errors.include?(:owner_id)).to eq true
   end
 
   it "test_should_require_an_owner_type" do
-    preference = build(:preference, :owner => nil)
+    preference = build(:preference, owner: nil)
     expect(preference.valid?).to eq false
     expect(preference.errors.include?(:owner_type)).to eq true
   end
 
   it "test_should_not_require_a_group_id" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, group: nil, owner: manager)
     expect(preference.valid?).to eq true
   end
 
   it "test_should_not_require_a_group_id_if_type_specified" do
-    preference = build(:preference, :group => nil)
-    preference.group_type = 'Car'
+    preference = build(:preference, group: nil, owner: manager)
+    preference.group_type = "Car"
     expect(preference.valid?).to eq true
   end
 
   it "test_should_not_require_a_group_type" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, group: nil, owner: manager)
     expect(preference.valid?).to eq true
   end
 
   it "test_should_require_a_group_type_if_id_specified" do
-    preference = build(:preference, :group => nil)
+    preference = build(:preference, group: nil)
     preference.group_id = 1
     expect(preference.valid?).to eq false
     expect(preference.errors.include?(:group_type)).to eq true
@@ -96,13 +97,13 @@ describe "PreferenceAsAClassTest" do
   end
 
   it "test_should_be_able_to_split_non_active_record_groups" do
-    group_id, group_type = Preference.split_group('car')
+    group_id, group_type = Preference.split_group("car")
     expect(group_id).to be_nil
-    expect(group_type).to eq 'car'
+    expect(group_type).to eq "car"
 
     group_id, group_type = Preference.split_group(:car)
     expect(group_id).to be_nil
-    expect(group_type).to eq 'car'
+    expect(group_type).to eq "car"
 
     group_id, group_type = Preference.split_group(10)
     expect(group_id).to be_nil
@@ -114,7 +115,7 @@ describe "PreferenceAsAClassTest" do
 
     group_id, group_type = Preference.split_group(car)
     expect(group_id).to eq 1
-    expect(group_type).to eq 'Car'
+    expect(group_type).to eq "Car"
   end
 end
 
@@ -123,7 +124,7 @@ describe "PreferenceAfterBeingCreatedTest" do
   before do
     User.preference :notifications, :boolean
 
-    @preference = create(:preference, :name => 'notifications')
+    @preference = create(:preference, name: "notifications")
   end
 
   it "test_should_have_an_owner" do
@@ -143,18 +144,18 @@ describe "PreferenceAfterBeingCreatedTest" do
   end
 
   after do
-    User.preference_definitions.delete('notifications')
+    User.preference_definitions.delete("notifications")
   end
 end
 
 #------------------------------------------------------------------------------
 describe "PreferenceWithBasicGroupTest" do
   before do
-    @preference = create(:preference, :group_type => 'car')
+    @preference = create(:preference, group_type: "car")
   end
 
   it "test_should_have_a_group_association" do
-    expect(@preference.group).to eq 'car'
+    expect(@preference.group).to eq "car"
   end
 end
 
@@ -162,7 +163,7 @@ end
 describe "PreferenceWithActiveRecordGroupTest" do
   before do
     @car = create(:car)
-    @preference = create(:preference, :group => @car)
+    @preference = create(:preference, group: @car)
   end
 
   it "test_should_have_a_group_association" do
@@ -177,12 +178,12 @@ describe "PreferenceWithBooleanTypeTest" do
   end
 
   it "test_should_type_cast_nil_values" do
-    preference = build(:preference, :name => 'notifications', :value => nil)
+    preference = build(:preference, name: "notifications", value: nil)
     expect(preference.value).to be_nil
   end
 
   it "test_should_type_cast_numeric_values" do
-    preference = build(:preference, :name => 'notifications', :value => 0)
+    preference = build(:preference, name: "notifications", value: 0)
     expect(preference.value).to eq false
 
     preference.value = 1
@@ -190,7 +191,7 @@ describe "PreferenceWithBooleanTypeTest" do
   end
 
   it "test_should_type_cast_boolean_values" do
-    preference = build(:preference, :name => 'notifications', :value => false)
+    preference = build(:preference, name: "notifications", value: false)
     expect(preference.value).to eq false
 
     preference.value = true
@@ -198,23 +199,23 @@ describe "PreferenceWithBooleanTypeTest" do
   end
 
   after do
-    User.preference_definitions.delete('notifications')
+    User.preference_definitions.delete("notifications")
   end
 end
 
 #------------------------------------------------------------------------------
 describe "PreferenceWithFloatTypeTest" do
   before do
-    User.preference :rate, :float, :default => 10.0
+    User.preference :rate, :float, default: 10.0
   end
 
   it "test_should_type_cast_nil_values" do
-    preference = build(:preference, :name => 'rate', :value => nil)
+    preference = build(:preference, name: "rate", value: nil)
     expect(preference.value).to be_nil
   end
 
   it "test_should_type_cast_numeric_values" do
-    preference = build(:preference, :name => 'rate', :value => 1.0)
+    preference = build(:preference, name: "rate", value: 1.0)
     expect(preference.value).to eq 1.0
 
     preference.value = "1.1"
@@ -222,7 +223,7 @@ describe "PreferenceWithFloatTypeTest" do
   end
 
   after do
-    User.preference_definitions.delete('rate')
+    User.preference_definitions.delete("rate")
   end
 end
 
@@ -230,7 +231,7 @@ end
 describe "PreferenceWithSTIOwnerTest" do
   before do
     @manager = create(:manager)
-    @preference = create(:preference, :owner => @manager, :name => 'health_insurance', :value => true)
+    @preference = create(:preference, owner: @manager, name: "health_insurance", value: true)
   end
 
   it "test_should_have_an_owner" do
@@ -238,7 +239,7 @@ describe "PreferenceWithSTIOwnerTest" do
   end
 
   it "test_should_have_an_owner_type" do
-    expect(@preference.owner_type).to eq 'Employee'
+    expect(@preference.owner_type).to eq "Employee"
   end
 
   it "test_should_have_a_definition" do

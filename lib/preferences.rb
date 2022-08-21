@@ -1,5 +1,5 @@
-require 'preferences/engine'
-require 'preferences/preference_definition'
+require "preferences/engine"
+require "preferences/preference_definition"
 
 # Adds support for defining preferences on ActiveRecord models.
 #
@@ -46,7 +46,6 @@ require 'preferences/preference_definition'
 #   u.valid?                        # => true
 module Preferences
   module MacroMethods
-
     # Defines a new preference for all records in the model.  By default,
     # preferences are assumed to have a boolean data type, so all values will
     # be typecasted to true/false based on ActiveRecord rules.
@@ -157,13 +156,13 @@ module Preferences
         class_attribute :preference_definitions
         self.preference_definitions = {}
 
-        has_many :stored_preferences, :as => :owner, :class_name => 'Preference', :dependent => :delete_all
+        has_many :stored_preferences, as: :owner, class_name: "Preference", dependent: :delete_all
 
         after_save :update_preferences
 
         # Named scopes
-        scope :with_preferences, lambda {|preferences| build_preference_scope(preferences)}
-        scope :without_preferences, lambda {|preferences| build_preference_scope(preferences, true)}
+        scope :with_preferences, lambda { |preferences| build_preference_scope(preferences) }
+        scope :without_preferences, lambda { |preferences| build_preference_scope(preferences, true) }
 
         extend Preferences::ClassMethods
         include Preferences::InstanceMethods
@@ -172,11 +171,11 @@ module Preferences
       # Create the definition
       name = name.to_s
       definition = PreferenceDefinition.new(name, *args)
-      self.preference_definitions[name] = definition
+      preference_definitions[name] = definition
 
       # Create short-hand accessor methods, making sure that the name
       # is method-safe in terms of what characters are allowed
-      name = name.gsub(/[^A-Za-z0-9_-]/, '').underscore
+      name = name.gsub(/[^A-Za-z0-9_-]/, "").underscore
 
       # Query lookup
       define_method("preferred_#{name}?") do |*group|
@@ -226,7 +225,7 @@ module Preferences
     end
   end
 
-  module ClassMethods #:nodoc:
+  module ClassMethods # :nodoc:
     # Generates the scope for looking under records with a specific set of
     # preferences associated with them.
     #
@@ -235,18 +234,16 @@ module Preferences
     # for, and querying for the the presence of multiple preferences requires
     # multiple joins.
     def build_preference_scope(preferences, inverse = false)
-      joins = []
-      statements = []
-      values = []
+      join_statements = []
+      conditions = nil
 
       # Flatten the preferences for easier processing
-      preferences = preferences.inject({}) do |result, (group, value)|
+      preferences = preferences.each_with_object({}) do |(group, value), result|
         if value.is_a?(Hash)
-          value.each {|preference, value| result[[group, preference]] = value}
+          value.each { |preference, value| result[[group, preference]] = value }
         else
           result[[nil, group]] = value
         end
-        result
       end
 
       preferences.each do |(group, preference), value|
@@ -256,45 +253,36 @@ module Preferences
         value = definition.type_cast(value)
         is_default = definition.default_value(group_type) == value
 
-        table = "preferences_#{group_id}_#{group_type}_#{preference}"
+        table_alias_name = "preferences_#{group_id}_#{group_type}_#{preference}"
+        table_alias = Preference.arel_table.alias(table_alias_name)
 
-        # Since each preference is a different record, they need their own
-        # join so that the proper conditions can be set
-        joins << "LEFT JOIN preferences AS #{table} ON #{table}.owner_id = #{table_name}.#{primary_key} AND " +
-          sanitize_sql_hash_for_conditions(
-            "#{table}.owner_type" => base_class.name.to_s,
-            "#{table}.group_id" => group_id,
-            "#{table}.group_type" => group_type,
-            "#{table}.name" => preference
-          )
+        equal_primary_key = table_alias[:owner_id].eq(arel_table[primary_key])
+        owner_type_equals_base_class = table_alias[:owner_type].eq(base_class)
+        group_id_equals = table_alias[:group_id].eq(group_id)
+        group_type_equals = table_alias[:group_type].eq(group_type)
+        name_equals = table_alias[:name].eq(preference)
 
-        if inverse
-          statements << "#{table}.id IS NOT NULL AND #{table}.value " + (value.nil? ? ' IS NOT NULL' : ' != ?') + (!is_default ? " OR #{table}.id IS NULL" : '')
-        else
-          statements << "#{table}.id IS NOT NULL AND #{table}.value " + (value.nil? ? ' IS NULL' : ' = ?') + (is_default ? " OR #{table}.id IS NULL" : '')
-        end
-        values << value unless value.nil?
+        join_statements << arel_table
+          .join(table_alias, Arel::Nodes::OuterJoin)
+          .on(equal_primary_key
+            .and(owner_type_equals_base_class)
+            .and(group_id_equals)
+            .and(group_type_equals)
+            .and(name_equals))
+
+        condition = table_alias[:id].not_eq(nil)
+        condition = inverse ? condition.and(table_alias[:value].not_eq(value)) : condition.and(table_alias[:value].eq(value))
+        condition = condition.or(table_alias[:id].eq(nil)) if is_default != inverse
+
+        conditions = conditions ? conditions.and(condition) : condition
       end
 
-      sql = statements.map! {|statement| "(#{statement})"} * ' AND '
-      joins(joins).where(values.unshift(sql))
+      joins(join_statements.map(&:join_sources)).where(conditions)
     end
-
-    # The Rails version of this function was removed in 5.0. So use this instead.
-    # It properly handles the 'IS NULL' case
-    def sanitize_sql_hash_for_conditions(attrs)
-      return '' unless attrs.is_a? Hash
-      conditions = []
-      attrs.each do |key, value|
-        conditions << (value ? sanitize_sql_for_conditions(["#{key} = ?", value]) : "#{key} IS NULL")
-      end
-      conditions.join(' AND ')
-    end
-
   end
 
   module InstanceMethods
-    def self.included(base) #:nodoc:
+    def self.included(base) # :nodoc:
       base.class_eval do
         alias_method :prefs, :preferences
       end
@@ -322,9 +310,9 @@ module Preferences
 
       unless preferences_group_loaded?(group)
         group_id, group_type = Preference.split_group(group)
-        find_preferences(:group_id => group_id, :group_type => group_type).each do |preference|
+        find_preferences(group_id: group_id, group_type: group_type).each do |preference|
           # fixed: ignore entries in database that are not present in the definition
-          preferences[preference.name] = preference.value unless (preferences.include?(preference.name) || !preference_definitions[preference.name])
+          preferences[preference.name] = preference.value unless preferences.include?(preference.name) || !preference_definitions[preference.name]
         end
 
         # Add defaults
@@ -333,9 +321,8 @@ module Preferences
         end
       end
 
-      preferences.inject({}) do |typed_preferences, (name, value)|
+      preferences.each_with_object({}) do |(name, value), typed_preferences|
         typed_preferences[name] = value.nil? ? value : preference_definitions[name].type_cast(value)
-        typed_preferences
       end
     end
 
@@ -393,7 +380,7 @@ module Preferences
       else
         # Grab the first preference; if it doesn't exist, use the default value
         group_id, group_type = Preference.split_group(group)
-        preference = find_preferences(:name => name, :group_id => group_id, :group_type => group_type).first unless preferences_group_loaded?(group)
+        preference = find_preferences(name: name, group_id: group_id, group_type: group_type).first unless preferences_group_loaded?(group)
 
         value = preference ? preference.value : preference_definitions[name].default_value(group_type)
         preferences_group(group)[name] = value
@@ -495,158 +482,157 @@ module Preferences
     #   user.write_preference(:color, 'red', :car)
     #   user.preference_changes(:car)               # => {"color" => [nil, "red"]}
     def preference_changes(group = nil)
-      preferences_changed(group).inject({}) do |changes, preference|
+      preferences_changed(group).each_with_object({}) do |preference, changes|
         changes[preference] = preference_change(preference, group)
-        changes
       end
     end
 
     # Reloads the pereferences of this object as well as its attributes
-    def reload(*args) #:nodoc:
+    def reload(*args) # :nodoc:
       result = super
 
-      @preferences.clear if @preferences
-      @preferences_changed.clear if @preferences_changed
+      @preferences&.clear
+      @preferences_changed&.clear
 
       result
     end
 
     private
 
-      # Asserts that the given name is a valid preference in this model.  If it
-      # is not, then an ArgumentError exception is raised.
-      def assert_valid_preference(name)
-        raise(ArgumentError, "Unknown preference: #{name}") unless preference_definitions.include?(name)
+    # Asserts that the given name is a valid preference in this model.  If it
+    # is not, then an ArgumentError exception is raised.
+    def assert_valid_preference(name)
+      raise(ArgumentError, "Unknown preference: #{name}") unless preference_definitions.include?(name)
+    end
+
+    # Gets the set of preferences identified by the given group
+    def preferences_group(group)
+      @preferences ||= {}
+      @preferences[group.is_a?(Symbol) ? group.to_s : group] ||= {}
+    end
+
+    # Determines whether the given group of preferences has already been
+    # loaded from the database
+    def preferences_group_loaded?(group)
+      preference_definitions.length == preferences_group(group).length
+    end
+
+    # Generates a clone of the current value stored for the preference with
+    # the given name / group
+    def clone_preference_value(name, group)
+      value = preferred(name, group)
+      value.duplicable? ? value.clone : value
+    rescue TypeError, NoMethodError
+      value
+    end
+
+    # Keeps track of all preferences that have been changed so that they can
+    # be properly updated in the database.  Maps group -> preference -> value.
+    def preferences_changed_group(group)
+      @preferences_changed ||= {}
+      @preferences_changed[group.is_a?(Symbol) ? group.to_s : group] ||= {}
+    end
+
+    # Determines whether a preference changed in the given group
+    def preference_changed?(name, group)
+      preferences_changed_group(group).include?(name)
+    end
+
+    # Builds an array of [original_value, new_value] for the given preference.
+    # If the perference did not change, this will return nil.
+    def preference_change(name, group)
+      [preferences_changed_group(group)[name], preferred(name, group)] if preference_changed?(name, group)
+    end
+
+    # Gets the last saved value for the given preference
+    def preference_was(name, group)
+      preference_changed?(name, group) ? preferences_changed_group(group)[name] : preferred(name, group)
+    end
+
+    # Forces the given preference to be saved regardless of whether the value
+    # is actually diferent
+    def preference_will_change!(name, group)
+      preferences_changed_group(group)[name] = clone_preference_value(name, group)
+    end
+
+    # Reverts any unsaved changes to the given preference
+    def reset_preference!(name, group)
+      write_preference(name, preferences_changed_group(group)[name], group) if preference_changed?(name, group)
+    end
+
+    # Determines whether the old value is different from the new value for the
+    # given preference.  This will use the typecasted value to determine
+    # equality.
+    def preference_value_changed?(name, old, value)
+      definition = preference_definitions[name]
+      if definition.type == :integer && (old.nil? || old == 0)
+        # For nullable numeric columns, NULL gets stored in database for blank (i.e. '') values.
+        # Hence we don't record it as a change if the value changes from nil to ''.
+        # If an old value of 0 is set to '' we want this to get changed to nil as otherwise it'll
+        # be typecast back to 0 (''.to_i => 0)
+        value = nil if value.blank?
+      else
+        value = definition.type_cast(value)
       end
 
-      # Gets the set of preferences identified by the given group
-      def preferences_group(group)
-        @preferences ||= {}
-        @preferences[group.is_a?(Symbol) ? group.to_s : group] ||= {}
-      end
+      old != value
+    end
 
-      # Determines whether the given group of preferences has already been
-      # loaded from the database
-      def preferences_group_loaded?(group)
-        preference_definitions.length == preferences_group(group).length
-      end
+    # Updates any preferences that have been changed/added since the record
+    # was last saved
+    def update_preferences
+      if @preferences_changed
+        @preferences_changed.each do |group, preferences|
+          group_id, group_type = Preference.split_group(group)
 
-      # Generates a clone of the current value stored for the preference with
-      # the given name / group
-      def clone_preference_value(name, group)
-        value = preferred(name, group)
-        value.duplicable? ? value.clone : value
-      rescue TypeError, NoMethodError
+          preferences.keys.each do |name|
+            # Find an existing preference or build a new one
+            attributes = {name: name, group_id: group_id, group_type: group_type}
+            unless (preference = find_preferences(attributes).first)
+              preference = stored_preferences.build
+              attributes.each_pair { |attribute, value| preference[attribute] = value }
+            end
+            preference.value = preferred(name, group)
+            preference.save!
+          end
+        end
+
+        @preferences_changed.clear
+      end
+    end
+
+    # Finds all stored preferences with the given attributes.  This will do a
+    # smart lookup by looking at the in-memory collection if it was eager-
+    # loaded.
+    def find_preferences(attributes)
+      if stored_preferences.loaded?
+        stored_preferences.select do |preference|
+          attributes.all? do |attribute, value|
+            if value.is_a?(Array)
+              value.include?(preference[attribute])
+            else
+              preference[attribute] == value
+            end
+          end
+        end
+      else
+        stored_preferences.where(attributes)
+      end
+    end
+
+    # Was removed from Rails 4, so inlne it here
+    def convert_number_column_value(value)
+      case value
+      when FalseClass
+        0
+      when TrueClass
+        1
+      when String
+        value.presence
+      else
         value
       end
-
-      # Keeps track of all preferences that have been changed so that they can
-      # be properly updated in the database.  Maps group -> preference -> value.
-      def preferences_changed_group(group)
-        @preferences_changed ||= {}
-        @preferences_changed[group.is_a?(Symbol) ? group.to_s : group] ||= {}
-      end
-
-      # Determines whether a preference changed in the given group
-      def preference_changed?(name, group)
-        preferences_changed_group(group).include?(name)
-      end
-
-      # Builds an array of [original_value, new_value] for the given preference.
-      # If the perference did not change, this will return nil.
-      def preference_change(name, group)
-        [preferences_changed_group(group)[name], preferred(name, group)] if preference_changed?(name, group)
-      end
-
-      # Gets the last saved value for the given preference
-      def preference_was(name, group)
-        preference_changed?(name, group) ? preferences_changed_group(group)[name] : preferred(name, group)
-      end
-
-      # Forces the given preference to be saved regardless of whether the value
-      # is actually diferent
-      def preference_will_change!(name, group)
-        preferences_changed_group(group)[name] = clone_preference_value(name, group)
-      end
-
-      # Reverts any unsaved changes to the given preference
-      def reset_preference!(name, group)
-        write_preference(name, preferences_changed_group(group)[name], group) if preference_changed?(name, group)
-      end
-
-      # Determines whether the old value is different from the new value for the
-      # given preference.  This will use the typecasted value to determine
-      # equality.
-      def preference_value_changed?(name, old, value)
-        definition = preference_definitions[name]
-        if definition.type == :integer && (old.nil? || old == 0)
-          # For nullable numeric columns, NULL gets stored in database for blank (i.e. '') values.
-          # Hence we don't record it as a change if the value changes from nil to ''.
-          # If an old value of 0 is set to '' we want this to get changed to nil as otherwise it'll
-          # be typecast back to 0 (''.to_i => 0)
-          value = nil if value.blank?
-        else
-          value = definition.type_cast(value)
-        end
-
-        old != value
-      end
-
-      # Updates any preferences that have been changed/added since the record
-      # was last saved
-      def update_preferences
-        if @preferences_changed
-          @preferences_changed.each do |group, preferences|
-            group_id, group_type = Preference.split_group(group)
-
-            preferences.keys.each do |name|
-              # Find an existing preference or build a new one
-              attributes = {:name => name, :group_id => group_id, :group_type => group_type}
-              unless (preference = find_preferences(attributes).first)
-                preference = stored_preferences.build
-                attributes.each_pair { |attribute, value| preference[attribute] = value }
-              end
-              preference.value = preferred(name, group)
-              preference.save!
-            end
-          end
-
-          @preferences_changed.clear
-        end
-      end
-
-      # Finds all stored preferences with the given attributes.  This will do a
-      # smart lookup by looking at the in-memory collection if it was eager-
-      # loaded.
-      def find_preferences(attributes)
-        if stored_preferences.loaded?
-          stored_preferences.select do |preference|
-            attributes.all? do |attribute, value|
-              if value.is_a?(Array)
-                value.include?(preference[attribute])
-              else
-                preference[attribute] == value
-              end
-            end
-          end
-        else
-          stored_preferences.where(attributes)
-        end
-      end
-
-      # Was removed from Rails 4, so inlne it here
-      def convert_number_column_value(value)
-        case value
-        when FalseClass
-          0
-        when TrueClass
-          1
-        when String
-          value.presence
-        else
-          value
-        end
-      end
+    end
   end
 end
 

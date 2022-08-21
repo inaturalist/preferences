@@ -12,6 +12,6 @@ class PreferencesGenerator < Rails::Generators::Base
   end
 
   def create_migration_file
-    migration_template 'create_preferences.rb', "db/migrate/create_preferences.rb"
+    migration_template "create_preferences.rb", "db/migrate/create_preferences.rb"
   end
 end

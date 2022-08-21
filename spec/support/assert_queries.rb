@@ -16,14 +16,14 @@ module ActiveRecord
     def call(name, start, finish, message_id, values)
       # FIXME: this seems bad. we should probably have a better way to indicate
       # the query was cached
-      unless 'CACHE' == values[:name]
+      unless values[:name] == "CACHE"
         self.class.query_count += 1 unless IGNORED_SQL.any? { |r| values[:sql] =~ r }
       end
     end
   end
 end
 
-ActiveSupport::Notifications.subscribe('sql.active_record', ActiveRecord::QueryCounter.new)
+ActiveSupport::Notifications.subscribe("sql.active_record", ActiveRecord::QueryCounter.new)
 
 module ActiveRecord
   class Base

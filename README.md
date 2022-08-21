@@ -1,4 +1,4 @@
-# Preferences 
+# Preferences
 
 [![Gem Version](https://badge.fury.io/rb/dm_preferences.svg)](http://badge.fury.io/rb/dm_preferences)
 [![Build Status](https://travis-ci.org/digitalmoksha/preferences.svg)](https://travis-ci.org/digitalmoksha/preferences)
@@ -30,9 +30,12 @@ a separate table and making it dead-simple to define and manage preferences.
 
 ### Installation
 
+####
+
+
 Add the following to your gem file:
 
-    gem 'dm_preferences', '~> 1.5'
+    gem 'dm_preferences', '~> 1.6'
 
 _preferences_ requires an additional database table to work.  You can generate
 a migration for this table like so:
@@ -268,6 +271,7 @@ Mailing List
 
 ## Dependencies
 
+* 1.6.x for Rails 6
 * 1.5.x for Rails 5
 * 1.0.x for Rails 4.2
 * 0.5.6 for Rails 4.1

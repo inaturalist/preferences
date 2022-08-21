@@ -9,3 +9,4 @@ spec/dummy/db/test.sqlite3
 spec/dummy/log
 .DS_Store
 .byebug_history
+gemfiles/*.gemfile.lock
