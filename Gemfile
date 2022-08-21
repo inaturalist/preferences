@@ -6,8 +6,6 @@ group :development, :test do
   gem "appraisal"
   gem "standard"
 
-  gem "pg"
-  gem "mysql2"
   gem "sqlite3"
 
   gem "pry-byebug"
