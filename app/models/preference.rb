@@ -19,6 +19,8 @@ class Preference < ActiveRecord::Base
   validates_presence_of :name, :owner_id, :owner_type
   validates_presence_of :group_type, if: :group_id?
 
+  after_save :touch_owner
+
   class << self
     # Splits the given group into its corresponding id and type. For simple
     # primitives, the id will be nil.  For complex types, specifically
@@ -67,5 +69,9 @@ class Preference < ActiveRecord::Base
   # Finds the definition for this preference in the given owner class.
   def find_definition(owner_class)
     owner_class.respond_to?(:preference_definitions) && owner_class.preference_definitions[name]
+  end
+
+  def touch_owner
+    owner.touch if owner.respond_to?(:touch)
   end
 end

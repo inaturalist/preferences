@@ -322,7 +322,11 @@ module Preferences
       end
 
       preferences.each_with_object({}) do |(name, value), typed_preferences|
-        typed_preferences[name] = value.nil? ? value : preference_definitions[name].type_cast(value)
+        typed_preferences[name] = if value.nil?
+                                    value
+                                  elsif preference_definitions.key?(name)
+                                    preference_definitions[name].type_cast(value)
+                                  end
       end
     end
 
